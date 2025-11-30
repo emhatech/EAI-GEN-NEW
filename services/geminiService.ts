@@ -613,7 +613,11 @@ export async function generateVeoImageToVideo(imageBase64: string, prompt: strin
         const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
         if (!videoUri) throw new Error("Video generation completed but no URI returned.");
         
-        // Append API Key to fetch result
-        return `${videoUri}&key=${activeKey}`;
+        // Securely fetch video content to avoid exposing API Key in UI
+        const videoResponse = await fetch(`${videoUri}&key=${activeKey}`);
+        if (!videoResponse.ok) throw new Error("Failed to fetch generated video content.");
+        
+        const videoBlob = await videoResponse.blob();
+        return URL.createObjectURL(videoBlob);
     });
 }

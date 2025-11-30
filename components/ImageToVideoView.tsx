@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ImageUploader } from './common/ImageUploader';
 import { Spinner } from './common/Spinner';
 import { CharacterImageData } from '../types';
@@ -12,6 +12,15 @@ export const ImageToVideoView: React.FC = () => {
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
     const [progressMsg, setProgressMsg] = useState('');
 
+    // Clean up Blob URL when component unmounts or URL changes
+    useEffect(() => {
+        return () => {
+            if (generatedVideoUrl) {
+                URL.revokeObjectURL(generatedVideoUrl);
+            }
+        };
+    }, [generatedVideoUrl]);
+
     const handleGenerate = async () => {
         if (!image) {
             alert("Silakan unggah gambar terlebih dahulu.");
@@ -19,7 +28,10 @@ export const ImageToVideoView: React.FC = () => {
         }
 
         setIsGenerating(true);
+        // Revoke old URL before creating a new one
+        if (generatedVideoUrl) URL.revokeObjectURL(generatedVideoUrl);
         setGeneratedVideoUrl(null);
+        
         setProgressMsg("Menginisialisasi Veo Model...");
 
         try {
