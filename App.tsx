@@ -92,6 +92,10 @@ export const App: React.FC = () => {
             }
         } catch (e) {
             console.error("Init error", e);
+            // Safe fallback if local storage is corrupted
+            setApiKeysState([]);
+            setApiKeys([]);
+            setShowApiKeyModal(true);
         }
     }, []);
 
@@ -100,13 +104,25 @@ export const App: React.FC = () => {
         localStorage.setItem('emhatech_draft', JSON.stringify({ storyText }));
     }, [theme, storyText]);
 
+    // Error Handler
+    const handleGlobalError = (e: any) => {
+        const msg = e.message || String(e);
+        // Detect Auth/Leak errors
+        if (msg.includes("BOCOR") || msg.includes("Leaked") || msg.includes("API Key tidak valid") || msg.includes("403")) {
+            alert(msg);
+            setShowApiKeyModal(true); // Auto open modal
+        } else {
+            alert("Error: " + msg);
+        }
+    };
+
     // Handlers
     const handleGenerateStoryIdeas = async () => {
         setIsLoadingIdeas(true);
         try {
             const ideas = await generateStoryIdeas(selectedGenre.name);
             setStoryIdeas(ideas);
-        } catch (e: any) { alert(e.message); } 
+        } catch (e: any) { handleGlobalError(e); } 
         finally { setIsLoadingIdeas(false); }
     };
 
@@ -141,7 +157,7 @@ export const App: React.FC = () => {
                 }
             }
         } catch (e: any) {
-            alert("Error: " + e.message);
+            handleGlobalError(e);
             setIsGeneratingStory(false);
         }
     };
@@ -208,7 +224,7 @@ export const App: React.FC = () => {
                     setUgcGeneratedImages([...newImgs]);
                 }
             }
-        } catch (e: any) { alert(e.message); }
+        } catch (e: any) { handleGlobalError(e); }
         finally { setIsGeneratingUGC(false); }
     };
 

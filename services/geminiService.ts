@@ -79,6 +79,11 @@ async function retryOperation<T>(fn: () => Promise<T>, retries = 3, operationNam
             return await fn();
         } catch (error: any) {
             const msg = getErrorMessage(error);
+            // Don't retry if it's an auth error (401, 403, leaked key)
+            if (msg.includes("403") || msg.includes("leaked") || msg.includes("PERMISSION_DENIED") || msg.includes("API key not valid")) {
+                throw error;
+            }
+
             const isTransient = msg.includes("Rpc failed") || msg.includes("xhr error") || msg.includes("fetch failed") || msg.includes("503");
             
             if (isTransient && i < retries - 1) {
@@ -109,17 +114,26 @@ async function callWithApiKeyRotation<T>(operation: (client: GoogleGenAI, key: s
                 return await operation(client, key);
             }, 2, "API Call");
         } catch (error: any) {
-            console.warn(`API Key ending in ...${key.slice(-4)} failed:`, getErrorMessage(error));
+            const msg = getErrorMessage(error);
+            console.warn(`API Key ending in ...${key.slice(-4)} failed:`, msg);
+            
+            // If the error is definitely about the key being bad/leaked, mark it as lastError
+            // but loop to try the next key if available.
             lastError = error;
-            // Continue to next key
         }
     }
     
     const finalMsg = getErrorMessage(lastError);
+    // Specific check for the "Leaked" error code 403 or Permission Denied
+    if (finalMsg.includes("leaked") || finalMsg.includes("PERMISSION_DENIED") || finalMsg.includes("403")) {
+        throw new Error("FATAL: API Key Anda dilaporkan BOCOR (Leaked) oleh Google dan diblokir. Harap segera buat API Key baru di aistudio.google.com dan ganti di menu Pengaturan.");
+    }
+    
     if (finalMsg.includes("API key not valid") || keysToTry.length === 0) {
         throw new Error("Kunci API tidak valid atau habis. Masukkan API Key baru di menu pengaturan.");
     }
-    throw lastError || new Error("Semua API Key gagal.");
+    
+    throw lastError || new Error("Semua API Key gagal. Periksa koneksi atau kuota Anda.");
 }
 
 function safeJsonParse(text: string, fallback: any) {
