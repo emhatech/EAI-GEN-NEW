@@ -7,6 +7,9 @@ export function setApiKeys(keys: string[]) {
     apiKeys = keys;
 }
 
+// USER PROVIDED KEY (Fallback)
+const FALLBACK_API_KEY = "AQ.Ab8RN6J17RA-DA3y2EL0onCRUFR24UT2d-sC-IDuzOuD68SH8Q";
+
 // Helper: Get API Key safely from Environment (Vite/Next/CRA compatible)
 export function getSystemApiKey(): string {
     try {
@@ -16,12 +19,14 @@ export function getSystemApiKey(): string {
             return import.meta.env.VITE_API_KEY;
         }
         if (typeof process !== 'undefined' && process.env) {
-            return process.env.REACT_APP_API_KEY || process.env.API_KEY || '';
+            const envKey = process.env.REACT_APP_API_KEY || process.env.API_KEY;
+            if (envKey) return envKey;
         }
     } catch (e) {
-        return '';
+        return FALLBACK_API_KEY;
     }
-    return '';
+    // If no env var found, use the hardcoded fallback
+    return FALLBACK_API_KEY;
 }
 
 // Helper: Parse Error Messages
